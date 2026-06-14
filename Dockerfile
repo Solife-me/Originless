@@ -1,7 +1,8 @@
-FROM node:slim
+FROM node:22-bookworm-slim
 
 ENV STORAGE_MAX=200GB
 ENV FILE_LIMIT=5GB
+ENV REMOTE_FILE_LIMIT=2GB
 ENV IPFS_PATH=/data
 ENV NODE_ENV=production
 
@@ -24,12 +25,10 @@ RUN npm install --omit=dev
 
 COPY . .
 
-# Create temp uploads directory, data directory, and set ownership
-# Using 'node' user which exists in node image
-RUN mkdir -p /tmp/originless /data && chown -R node:node /app /tmp/originless /data
-
-# Switch to non-root user
-USER node
+# Create temp uploads directory and a fallback data directory for local runs
+RUN chmod +x /app/docker_entrypoint.sh /app/healthcheck.sh && \
+  mkdir -p /tmp/originless /data && \
+  chown -R node:node /app /tmp/originless
 
 EXPOSE 3232 4001/tcp 4001/udp
 
@@ -44,13 +43,4 @@ LABEL com.docker.compose.stop-grace-period="15s"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=7m --retries=5 \
   CMD curl -f http://localhost:3232/health || exit 1
 
-CMD ["sh", "-c", "\
-  if [ ! -f \"$IPFS_PATH/config\" ]; then ipfs init --profile=lowpower; fi && \
-  ipfs config Datastore.StorageMax ${STORAGE_MAX} && \
-  ipfs config --json Routing.Type '\"dhtclient\"' && \
-  ipfs config --json Provide.DHT.Interval '\"24h\"' && \
-  ipfs daemon --enable-gc --routing=dhtclient & \
-  until curl -s http://127.0.0.1:5001/api/v0/id > /dev/null; do \
-  echo 'Waiting for IPFS daemon...'; sleep 3; \
-  done && \
-  exec node app.js"]
+ENTRYPOINT ["/app/docker_entrypoint.sh"]

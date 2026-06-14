@@ -1,0 +1,121 @@
+id: originless
+title: Originless
+version: 0.0.8.4
+release-notes: |
+  - Fix StartOS data-volume permissions and IPFS readiness probe so Originless can finish booting
+license: ISC
+wrapper-repo: "https://github.com/besoeasy/Originless"
+upstream-repo: "https://github.com/besoeasy/Originless"
+support-site: "https://github.com/besoeasy/Originless/issues"
+marketing-site: "https://originless.besoeasy.com"
+build: ["make"]
+description:
+  short: Anonymous IPFS-backed file storage and static-site hosting
+  long: |
+    Originless is a self-hosted anonymous upload service built on IPFS.
+    This package runs Originless with an embedded Kubo node, exposes the web UI
+    and REST API, and persists the IPFS repository in the service data volume.
+assets:
+  license: LICENSE
+  icon: icon.png
+  instructions: instructions.md
+main:
+  type: docker
+  image: main
+  entrypoint: /app/docker_entrypoint.sh
+  args: []
+  mounts:
+    main: /data
+hardware-requirements:
+  arch:
+    - x86_64
+    - aarch64
+health-checks:
+  web-ui:
+    name: Web Interface
+    success-message: Originless is ready to accept uploads
+    type: docker
+    image: main
+    system: false
+    entrypoint: /app/healthcheck.sh
+    args: []
+    mounts: {}
+    io-format: json
+    inject: true
+config:
+  get:
+    type: script
+  set:
+    type: script
+properties:
+  type: script
+dependencies: {}
+volumes:
+  main:
+    type: data
+interfaces:
+  main:
+    name: Web UI
+    description: Serves the Originless web UI and REST API over HTTPS.
+    tor-config:
+      port-mapping:
+        80: "3232"
+    lan-config:
+      443:
+        ssl: true
+        internal: 3232
+    ui: true
+    protocols:
+      - tcp
+      - http
+  peer:
+    name: IPFS Peer
+    description: Raw TCP hidden-service peer port for the embedded IPFS node.
+    tor-config:
+      port-mapping:
+        4001: "4001"
+    ui: false
+    protocols:
+      - tcp
+alerts:
+  start: |
+    Originless may take a few minutes to bootstrap its embedded IPFS node on first start.
+backup:
+  create:
+    type: docker
+    image: compat
+    system: true
+    entrypoint: compat
+    args:
+      - duplicity
+      - create
+      - /mnt/backup
+      - /root/data
+    mounts:
+      BACKUP: /mnt/backup
+      main: /root/data
+    io-format: yaml
+  restore:
+    type: docker
+    image: compat
+    system: true
+    entrypoint: compat
+    args:
+      - duplicity
+      - restore
+      - /mnt/backup
+      - /root/data
+    mounts:
+      BACKUP: /mnt/backup
+      main: /root/data
+    io-format: yaml
+actions: {}
+migrations:
+  from:
+    "*":
+      type: script
+      args: ["from"]
+  to:
+    "*":
+      type: script
+      args: ["to"]

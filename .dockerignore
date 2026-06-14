@@ -1,0 +1,16 @@
+.git
+.gitignore
+node_modules
+javascript
+*.s9pk
+docker-images
+startos
+assets
+Makefile
+s9pk.mk
+tsconfig.json
+CONTRIBUTING.md
+icon.png
+temp_uploads
+db
+.env
