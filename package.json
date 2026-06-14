@@ -1,6 +1,6 @@
 {
   "name": "originless",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "main": "app.js",
   "scripts": {
     "build": "rm -rf ./javascript && ncc build startos/index.ts -o ./javascript",

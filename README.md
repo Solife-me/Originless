@@ -1,24 +1,45 @@
-# Originless for StartOS 0.4.0 Beta
+<div align="center">
 
-This repository contains the Originless application and a StartOS `0.4.0`
-beta package wrapper built with the TypeScript Start SDK.
+# 🌐 Originless
 
-Originless is a self-hosted anonymous upload service backed by an embedded
-Kubo/IPFS node. The StartOS package exposes the web UI and REST API, persists
-the IPFS repository on the package volume, and provides actions for upload
-limits and Daku pin-management keys.
+**Private, decentralized file sharing for Nostr and the web**
 
-## Build
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/besoeasy/Originless/pkgs/container/originless)
+[![IPFS](https://img.shields.io/badge/IPFS-65C2CB?style=for-the-badge&logo=ipfs&logoColor=white)](https://ipfs.tech)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg?style=for-the-badge)](https://opensource.org/licenses/ISC)
 
-Install the StartOS 0.4 packaging dependencies:
+**One storage backend to rule them all** — Drop into apps, screenshot tools, pastebin-style pastes, Nostr clients, Reddit posts, forum embeds. Durable, anonymous file hosting that keeps you private.
 
-- Docker with `buildx`
-- Node.js and npm
-- `start-cli`
+<img width="1536" src="https://github.com/user-attachments/assets/5014810c-cc51-4ad4-a1b8-6e4db510c09f" alt="Originless Banner" />
 
-Then build the universal x86_64/aarch64 package:
+</div>
+
+---
+
+## 🚀 Quick Start
+
+### Docker
 
 ```bash
+docker run -d --restart unless-stopped --name originless \
+  -p 3232:3232 \
+  -p 4001:4001/tcp \
+  -p 4001:4001/udp \
+  -v originlessd:/data \
+  -e STORAGE_MAX=200GB \
+  ghcr.io/besoeasy/originless
+```
+
+Open http://localhost:3232
+
+### StartOS Package
+
+This repository also includes a StartOS `0.4.0` beta package wrapper built
+with the TypeScript Start SDK. Install Docker with `buildx`, Node.js and npm,
+and `start-cli`, then build the universal x86_64/aarch64 package:
+
+```bash
+npm ci
 make
 ```
 
@@ -29,14 +50,108 @@ make x86
 make arm
 ```
 
-The default build produces `originless.s9pk`.
+The default build produces `originless.s9pk`. Package definitions live in
+`startos/`, and shared build plumbing lives in `s9pk.mk`.
 
-## StartOS Package Layout
+### Public Gateways
 
-- `startos/` contains the 0.4 TypeScript package definition.
-- `startos/manifest/index.ts` defines package metadata and image builds.
-- `startos/main.ts` starts Originless and wires runtime configuration into the
-  container.
-- `startos/interfaces.ts` exports the web/API and IPFS peer interfaces.
-- `startos/actions/` contains configuration and pin-key actions.
-- `s9pk.mk` contains the shared `start-cli s9pk pack` build plumbing.
+| Gateway  | URL                              |
+| -------- | -------------------------------- |
+| besoeasy | https://originless.besoeasy.com/ |
+| gupt.app | https://originless.gupt.app/     |
+| 0xchat   | https://originless.0xchat.com/   |
+
+---
+
+## 🌟 Use Cases
+
+- **🌍 Decentralized Apps** — Build your frontend and upload the `dist` folder to host your live DApp on IPFS
+- **🖼️ Screenshot Tools** — Anonymous image hosting for screenshots and screen recordings
+- **📝 Pastebin Alternative** — Decentralized paste and snippet sharing
+- **💬 Nostr Clients** — Media attachments for decentralized social apps
+- **🎨 Portfolio Hosting** — Permanent galleries and portfolios that survive link rot
+- **📦 Package Distribution** — Resilient software and asset distribution
+- **🎵 Podcast Hosting** — Decentralized RSS feed media hosting
+- **💾 Backup Storage** — Self-healing backup infrastructure
+
+---
+
+## 🔄 How It Works
+
+1. **Upload** — Files stream to your local IPFS node (unpinned by default)
+2. **Propagate** — Content spreads via IPFS as peers request it
+3. **Self-Heal** — If garbage collected, your node repopulates content when online
+
+---
+
+## 🤝 Integrations
+
+| Platform | Description |
+| -------- | ----------- |
+| [0xchat](https://0xchat.com/) | Private, decentralized Nostr chat |
+| [ZeroNote](https://zeronote.js.org/) | Anonymous encrypted notes sharing |
+| [gupt.app](https://gupt.app/) | Private, anonymous file sharing |
+
+---
+
+## ⚙️ Configuration
+
+| Variable      | Default | Description                    |
+| ------------- | ------- | ------------------------------ |
+| `STORAGE_MAX` | `200GB` | Maximum storage limit for IPFS |
+| `PORT`        | `3232`  | API server port                |
+
+---
+
+## 🛠️ API Reference
+
+Base URL: `http://localhost:3232`
+
+### POST /upload
+
+Upload a single file.
+
+```bash
+curl -X POST -F "file=@yourfile.pdf" http://localhost:3232/upload
+```
+
+```json
+{
+  "status": "success",
+  "cid": "QmX...",
+  "url": "https://dweb.link/ipfs/QmX...?filename=yourfile.pdf",
+  "size": 12345,
+  "type": "application/pdf",
+  "filename": "yourfile.pdf"
+}
+```
+
+### POST /uploadzip
+
+Upload a `.zip` archive. Originless extracts it and stores the entire folder to IPFS as a directory. Use this for static site and DApp deploys.
+
+```bash
+curl -X POST -F "file=@dist.zip" http://localhost:3232/uploadzip
+```
+
+```json
+{
+  "status": "success",
+  "cid": "QmX...",
+  "url": "https://dweb.link/ipfs/QmX.../",
+  "filename": "dist.zip",
+  "fileCount": 12
+}
+```
+
+---
+
+## 🤖 AI Agent Integration
+
+Teach your agents (Cursor, GitHub Copilot, Claude, etc.) to use Originless — **no API keys, no accounts, no configuration required**. Just point them at a running instance.
+
+### Example Prompts
+
+- _"What's the current Bitcoin price? Create a beautiful `index.html` report and upload it to `https://originless.besoeasy.com/upload` so I can share it."_
+- _"Generate a complex 3D fractal image, save it as a PNG, and upload it to my local Originless node at `http://localhost:3232/upload`."_
+- _"Build a React Pomodoro timer app, zip the `dist` output, and publish it live to IPFS via `https://originless.besoeasy.com/uploadzip`."_
