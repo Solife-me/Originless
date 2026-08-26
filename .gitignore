@@ -1,7 +1,29 @@
-node_modules
-temp_uploads/
-db/
+# Binaries
+/originless
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage
+*.test
+*.out
+
+# Environment
 .env
-javascript/
-*.s9pk
-docker-images/
+.env.*
+
+# Editor
+.idea/
+.vscode/
+.cursor/
+*.swp
+*~
+
+# Data directory
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

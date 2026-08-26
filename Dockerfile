@@ -1,46 +1,42 @@
-FROM node:22-bookworm-slim
-
-ENV STORAGE_MAX=200GB
-ENV FILE_LIMIT=5GB
-ENV REMOTE_FILE_LIMIT=2GB
-ENV IPFS_PATH=/data
-ENV NODE_ENV=production
-
-# Install dependencies (curl, tar, etc.)
-RUN apt-get update && \
-  apt-get install -y curl tar && \
-  rm -rf /var/lib/apt/lists/*
-
-# Install IPFS (Kubo)
-RUN curl -fsSL "https://dist.ipfs.tech/kubo/v0.40.1/kubo_v0.40.1_linux-$(dpkg --print-architecture).tar.gz" | \
-  tar -xz -C /tmp && \
-  mv /tmp/kubo/ipfs /usr/local/bin/ipfs && \
-  rm -rf /tmp/kubo
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-
-RUN npm install --omit=dev
+COPY go.mod go.sum* ./
+RUN go mod download
 
 COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /originless .
 
-# Create temp uploads directory and a fallback data directory for local runs
-RUN chmod +x /app/docker_entrypoint.sh /app/healthcheck.sh && \
-  mkdir -p /tmp/originless /data && \
-  chown -R node:node /app /tmp/originless
+FROM alpine:latest
 
-EXPOSE 3232 4001/tcp 4001/udp
+ENV STORAGE_MAX=100GB
+ENV PIN_EXPIRY_DAYS=30
+ENV NOSTR_NPUBS=""
+ENV NOSTR_RELAYS=""
+ENV ENABLE_GATEWAY=true
+ENV IPFS_GATEWAY=http://127.0.0.1:8080
 
-# Declare volume for IPFS data persistence
-VOLUME ["/data"]
+RUN apk add --no-cache ca-certificates gcompat kubo && \
+  adduser -D -h /app originless
 
-# Stop signal and grace period for clean shutdown
+WORKDIR /app
+
+COPY --from=builder /originless /app/originless
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+
+RUN chmod +x /app/docker-entrypoint.sh && \
+  mkdir -p /tmp/originless /data /archive && \
+  chown -R originless:originless /app /tmp/originless /data /archive
+
+USER originless
+
+EXPOSE 3232 8080 4001/tcp 4001/udp
+
+VOLUME ["/archive"]
+
 STOPSIGNAL SIGTERM
-LABEL com.docker.compose.stop-grace-period="15s"
 
-# Health check - wait 7m for IPFS to connect to peers
-HEALTHCHECK --interval=30s --timeout=10s --start-period=7m --retries=5 \
-  CMD curl -f http://localhost:3232/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD wget -qO- http://127.0.0.1:3232/health || exit 1
 
-ENTRYPOINT ["/app/docker_entrypoint.sh"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
