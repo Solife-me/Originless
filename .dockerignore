@@ -1,9 +1,5 @@
-.git
-.github
-README.md
-originless
-*.exe
-.env
-.env.*
-.idea
-.vscode
+# Keep the build context to what the Go build actually needs.
+.git/
+.github/
+.playwright-mcp/
+*.log

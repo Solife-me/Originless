@@ -1,42 +1,52 @@
-FROM golang:1.24-alpine AS builder
+# syntax=docker/dockerfile:1
 
-WORKDIR /app
+# GO_VERSION must satisfy the `go` directive in go.mod; the release workflow
+# passes it through so the builder, the tests and the module agree.
+ARG GO_VERSION=1.24
+FROM golang:${GO_VERSION}-alpine AS builder
+
+ARG VERSION=dev
+ARG TARGETOS
+ARG TARGETARCH
+WORKDIR /src
 
 COPY go.mod go.sum* ./
 RUN go mod download
-
 COPY . .
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /originless .
+RUN CGO_ENABLED=0 \
+    GOOS="${TARGETOS:-$(go env GOOS)}" \
+    GOARCH="${TARGETARCH:-$(go env GOARCH)}" \
+    go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/originless ./cmd/originless
 
 FROM alpine:latest
 
-ENV STORAGE_MAX=100GB
-ENV PIN_EXPIRY_DAYS=30
-ENV NOSTR_NPUBS=""
-ENV NOSTR_RELAYS=""
-ENV ENABLE_GATEWAY=true
-ENV IPFS_GATEWAY=http://127.0.0.1:8080
+ARG VERSION=dev
+LABEL org.opencontainers.image.title="Originless" \
+      org.opencontainers.image.version="${VERSION}"
 
-RUN apk add --no-cache ca-certificates gcompat kubo && \
-  adduser -D -h /app originless
+# Kubo is Alpine's package name for the IPFS implementation and provides
+# the `ipfs` command-line executable.
+RUN apk add --no-cache kubo ca-certificates curl \
+    && ipfs --version \
+    && addgroup -S originless \
+    && adduser -S -G originless -h /app originless \
+    && mkdir -p /data/ipfs \
+    && chown -R originless:originless /app /data
 
 WORKDIR /app
+COPY --from=builder /out/originless /usr/local/bin/originless
+COPY entry.sh /app/entrypoint.sh
 
-COPY --from=builder /originless /app/originless
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+ENV IPFS_PATH=/data/ipfs \
+    PORT=3232 \
+    STORAGE_MAX=20GB
 
-RUN chmod +x /app/docker-entrypoint.sh && \
-  mkdir -p /tmp/originless /data /archive && \
-  chown -R originless:originless /app /tmp/originless /data /archive
-
-USER originless
-
-EXPOSE 3232 8080 4001/tcp 4001/udp
-
-VOLUME ["/archive"]
+# Only the Originless web UI is exposed. IPFS swarm and RPC ports remain internal.
+EXPOSE 3232/tcp
 
 STOPSIGNAL SIGTERM
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD wget -qO- "http://127.0.0.1:${PORT:-3232}/healthz" || exit 1
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD wget -qO- http://127.0.0.1:3232/health || exit 1
-
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+USER originless
+ENTRYPOINT ["/app/entrypoint.sh"]
