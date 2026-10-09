@@ -3,3 +3,11 @@
 .github/
 .playwright-mcp/
 *.log
+
+# StartOS packaging: keep the build context to the Go sources
+node_modules
+javascript
+ncc-cache
+docker-images
+*.s9pk
+startos

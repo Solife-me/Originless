@@ -14,7 +14,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     name: i18n('Web UI'),
     id: 'ui',
     description: i18n(
-      'Browser interface for Originless uploads, examples, and status views',
+      'Dashboard and demo apps: shared canvas, chat, event stream, and uploads',
     ),
     type: 'ui',
     masked: false,
@@ -26,7 +26,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   const api = sdk.createInterface(effects, {
     name: i18n('REST API'),
     id: 'api',
-    description: i18n('Programmatic Originless API endpoint'),
+    description: i18n('Events, live updates, and IPFS upload endpoints'),
     type: 'api',
     masked: false,
     schemeOverride: null,

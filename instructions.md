@@ -1,36 +1,37 @@
-# Welcome to Originless
+# Originless
 
-Originless is an anonymous file and static-site host backed by IPFS.
+## Documentation
 
-## Using the Service
+- [Originless README](https://github.com/besoeasy/Originless/blob/main/README.md) — the upstream overview: events, uploads, federation, and configuration
+- [Originless API reference](https://github.com/besoeasy/Originless/blob/main/docs/api.md) — every endpoint with request and response formats
 
-1. Start the service.
-2. Open `Launch UI` to use the built-in upload page and examples.
-3. Use the same address for API requests such as `/upload`, `/uploadzip`,
-   `/remoteupload`, `/health`, and `/status`.
+## What you get on StartOS
 
-## Pin Management
+- **Web UI** — the Originless dashboard, with live demos (a shared canvas, chat, an event stream) and an upload page.
+- **REST API** — the same address your apps call to publish and stream signed events and to upload files and folders to IPFS.
+- **IPFS Peer** — the embedded IPFS node's peer port, so other IPFS nodes can connect in and fetch what you upload.
 
-Originless generates a persistent Daku keypair the first time it starts.
-Run the `Get Pin Management Keys` action to view the public and private keys.
+Your IPFS data and event history are kept on the server and included in backups.
 
-Use that keypair to authenticate requests to:
+## Getting set up
 
-- `/pin/add`
-- `/pin/list`
-- `/pin/remove`
+1. Start the service and wait for both health checks to turn green. The IPFS node takes a few seconds to start.
+2. Open the **Web UI** interface to see the dashboard.
+3. Optional: run **Configure Originless** to change the storage limit or add federation peers.
 
-## Configuration
+## Using Originless
 
-Run the `Configure Originless` action to adjust:
+### Access
 
-- the IPFS storage limit
-- the upload size limit
-- the remote upload size limit
-- additional Daku public keys allowed to manage pins
+Originless has no accounts, passwords, or API keys. Anyone who can reach the Web UI or REST API address can publish events and upload files, so only share that address with people and apps you trust.
 
-## Notes
+### Uploads
 
-- Uploads are anonymous.
-- Unpinned content may be garbage-collected.
-- The `IPFS Peer` interface exposes the embedded Kubo TCP peer port.
+Uploads are not pinned. When the IPFS storage nears its limit, older content can be cleared out, so treat uploaded files as temporary unless you pin them elsewhere.
+
+### Configure Originless
+
+- **Storage Limit** — how much disk the IPFS storage may use. Stored events can use up to a fifth of it; past that, the oldest events are removed.
+- **Federation Peers** — addresses of other Originless nodes. Your node and each peer exchange events every few seconds. Uploaded files are not shared between nodes.
+
+Saving restarts the service.

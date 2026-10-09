@@ -1,47 +1,9 @@
 {
-  "name": "originless",
-  "version": "0.1.0",
-  "main": "app.js",
-  "scripts": {
-    "build": "rm -rf ./javascript && ncc build startos/index.ts -o ./javascript",
-    "check": "tsc --noEmit",
-    "prettier": "prettier --write startos",
-    "test": "docker run --name ipfs-host --rm --network host docker.io/ipfs/kubo:latest",
-    "start": "node app.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/besoeasy/Originless.git"
-  },
-  "author": "besoeasy",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/besoeasy/Originless/issues"
-  },
-  "homepage": "https://github.com/besoeasy/Originless#readme",
+  "name": "originless-startos",
   "dependencies": {
-    "axios": "^1.13.4",
-    "compression": "^1.8.1",
-    "cors": "^2.8.5",
-    "daku": "^0.1.0",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "form-data": "^4.0.1",
-    "mime-types": "^3.0.2",
-    "multer": "^1.4.5-lts.2",
-    "unzipper": "^0.12.3"
+    "@start9labs/start-sdk": "3.0.3"
   },
-  "devDependencies": {
-    "@start9labs/start-sdk": "^0.4.0-beta.66",
-    "@types/node": "^22.19.0",
-    "@vercel/ncc": "^0.38.4",
-    "prettier": "^3.6.2",
-    "typescript": "^5.9.3"
-  },
-  "prettier": {
-    "trailingComma": "all",
-    "tabWidth": 2,
-    "semi": false,
-    "singleQuote": true
+  "overrides": {
+    "@start9labs/start-sdk": "$@start9labs/start-sdk"
   }
 }

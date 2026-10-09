@@ -5,31 +5,26 @@ export const manifest = setupManifest({
   id: 'originless',
   title: 'Originless',
   license: 'ISC',
-  packageRepo: 'https://github.com/besoeasy/Originless',
+  packageRepo: 'https://github.com/Solife-me/Originless',
   upstreamRepo: 'https://github.com/besoeasy/Originless',
-  marketingUrl: 'https://originless.besoeasy.com',
+  marketingUrl: 'https://github.com/besoeasy/Originless',
   donationUrl: null,
-  docsUrls: [
-    'https://github.com/besoeasy/Originless/blob/main/README.md',
-    'https://github.com/besoeasy/Originless/blob/main/api.md',
-  ],
+  preDownloadAlert: {
+    message: {
+      en_US:
+        'Originless 1.0.7 is a rewrite. **Pin management keys, upload size limits, Nostr archiving, and pin retention are removed**, and new uploads are not pinned, so they can be garbage-collected. Your IPFS repository and storage limit are kept. Back up this service before updating.',
+    },
+    when: { sourceVersion: '<1.0.7:0' },
+  },
   description: { short, long },
-  volumes: ['main'],
+  volumes: ['main', 'startos'],
   images: {
     originless: {
       source: {
-        dockerBuild: {},
+        // Keep VERSION in step with startos/versions/current.ts.
+        dockerBuild: { buildArgs: { VERSION: '1.0.7' } },
       },
       arch: ['x86_64', 'aarch64'],
     },
   },
-  alerts: {
-    install: null,
-    update: null,
-    uninstall: null,
-    restore: null,
-    start: null,
-    stop: null,
-  },
-  dependencies: {},
 })

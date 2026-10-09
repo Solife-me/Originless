@@ -1,29 +1,12 @@
 import { i18n } from './i18n'
 import { storeJson } from './fileModels/store.json'
 import { sdk } from './sdk'
-import {
-  appPort,
-  combineAllowedUsers,
-  defaultFileLimit,
-  defaultRemoteFileLimit,
-  defaultStorageMax,
-} from './utils'
+import { appPort, defaultStorageMax } from './utils'
 
 export const main = sdk.setupMain(async ({ effects }) => {
-  const storageMax =
-    (await storeJson.read((s) => s.storageMax).const(effects)) ??
-    defaultStorageMax
-  const fileLimit =
-    (await storeJson.read((s) => s.fileLimit).const(effects)) ??
-    defaultFileLimit
-  const remoteFileLimit =
-    (await storeJson.read((s) => s.remoteFileLimit).const(effects)) ??
-    defaultRemoteFileLimit
-  const publicKey =
-    (await storeJson.read((s) => s.pinManager.publicKey).const(effects)) ?? ''
-  const additionalAllowedUsers =
-    (await storeJson.read((s) => s.additionalAllowedUsers).const(effects)) ?? []
-  const allowedUsers = combineAllowedUsers(publicKey, additionalAllowedUsers)
+  const settings = await storeJson.read().const(effects)
+  const storageMax = settings?.storageMax ?? defaultStorageMax
+  const syncNodes = settings?.syncNodes ?? []
 
   console.info(i18n('Starting Originless'))
 
@@ -40,49 +23,72 @@ export const main = sdk.setupMain(async ({ effects }) => {
   )
 
   return sdk.Daemons.of(effects)
+    .addOneshot('chown', {
+      subcontainer: appSub,
+      exec: {
+        // The image runs as `originless`; StartOS mounts the volume root-owned.
+        command: [
+          'sh',
+          '-c',
+          'mkdir -p /data/ipfs && find /data ! -user originless -exec chown -h originless:originless {} +',
+        ],
+        user: 'root',
+      },
+      requires: [],
+    })
+    .addOneshot('ipfs-migrate', {
+      subcontainer: appSub,
+      exec: {
+        // Kubo refuses to start on a repository an older Kubo wrote, and the
+        // upstream entrypoint does not pass --migrate. No-op when current.
+        command: [
+          'sh',
+          '-c',
+          '[ ! -f "$IPFS_PATH/config" ] || ipfs repo migrate',
+        ],
+        env: { IPFS_PATH: '/data/ipfs' },
+      },
+      requires: ['chown'],
+    })
     .addDaemon('originless', {
       subcontainer: appSub,
       exec: {
         command: sdk.useEntrypoint(),
         env: {
           STORAGE_MAX: storageMax,
-          FILE_LIMIT: fileLimit,
-          REMOTE_FILE_LIMIT: remoteFileLimit,
-          ALLOWED_USERS: allowedUsers.join(','),
+          SYNC_NODES: syncNodes.join(','),
         },
       },
       ready: {
-        display: i18n('Originless API'),
+        display: i18n('Web Interface'),
         fn: () =>
           sdk.healthCheck.checkPortListening(effects, appPort, {
-            successMessage: i18n('Originless web interface is listening'),
-            errorMessage: i18n('Waiting for Originless to start listening'),
+            successMessage: i18n('The web interface is ready'),
+            errorMessage: i18n('Waiting for the IPFS node and web interface'),
           }),
       },
-      requires: [],
+      requires: ['ipfs-migrate'],
     })
-    .addHealthCheck('ipfs-network', {
+    .addHealthCheck('ipfs', {
       ready: {
-        display: i18n('IPFS Network'),
+        display: i18n('IPFS Node'),
         fn: async () => {
           const result = await appSub.exec([
             'curl',
             '-fsS',
-            `http://127.0.0.1:${appPort}/health`,
+            `http://127.0.0.1:${appPort}/healthz`,
           ])
 
           if (result.exitCode === 0) {
             return {
               result: 'success',
-              message: i18n('Originless is connected to the IPFS network'),
+              message: i18n('The embedded IPFS node is responding'),
             }
           }
 
           return {
-            result: 'loading',
-            message: i18n(
-              'Waiting for Originless to reach at least one IPFS peer',
-            ),
+            result: 'failure',
+            message: i18n('The embedded IPFS node is not responding'),
           }
         },
       },
